@@ -1,5 +1,7 @@
 # World Cup 2026 Predictor
 
+Live at **<https://wc-predictor-neon.vercel.app>**.
+
 Match-by-match predictions for FIFA World Cup 2026.
 
 - **Data**: [football-data.org](https://www.football-data.org/) free tier (competition code `WC`).
