@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# World Cup 2026 Predictor
 
-## Getting Started
+Match-by-match predictions for FIFA World Cup 2026.
 
-First, run the development server:
+- **Data**: [football-data.org](https://www.football-data.org/) free tier (competition code `WC`).
+- **Model**: Elo ratings → Poisson goals → win/draw/loss probabilities + most-likely scorelines.
+- **Commentary**: 2–3 sentence AI write-up via Vercel AI Gateway (`anthropic/claude-haiku-4-5` by default).
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local
+# fill in FOOTBALL_DATA_API_KEY at minimum
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Var | Required | Notes |
+| --- | --- | --- |
+| `FOOTBALL_DATA_API_KEY` | yes | Free key from football-data.org. 10 req/min on free tier. |
+| `AI_GATEWAY_API_KEY` | no | Vercel AI Gateway key. Without it, commentary falls back to a deterministic summary. |
+| `WC_COMMENTARY_MODEL` | no | Override default model. Use `provider/model` strings. |
 
-## Learn More
+When deployed to Vercel, `AI_GATEWAY_API_KEY` is auto-injected.
 
-To learn more about Next.js, take a look at the following resources:
+## How the model works
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Each team gets an Elo rating from `data/elo-seed.json` (default `1600` for unseeded teams).
+2. The Elo gap drives expected goals per side, calibrated to ~1.30 goals per team for an even match.
+3. A Poisson goal distribution gives the score matrix → home / draw / away probabilities and most likely scorelines.
+4. The numbers are handed to an LLM that writes neutral pundit-style commentary.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Tweak the constants in `lib/predict.ts` (`AVG_GOALS`, `ELO_TO_GOALS`, `HOME_ADVANTAGE_ELO`) to recalibrate.
 
-## Deploy on Vercel
+## Pages
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `/` — upcoming matches with inline win probabilities.
+- `/match/[id]` — single-match prediction page with AI commentary.
+- `/bracket` — 12 group cards + FIFA-published knockout tree. `?mode=projected` fills every slot with the most-likely team and shows the predicted champion.
+- `/tournament` — Monte Carlo forecast (2,000 iterations) with per-team round-by-round probabilities. Third-place R32 slots use FIFA's official 495-row Annex C lookup table.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Refreshing Elo seeds
+
+`data/elo-seed.json` is generated from the [martj42/international_results](https://github.com/martj42/international_results) dataset (~49k international matches since 1872) by rolling World-Football-Elo updates forward through every game:
+
+```bash
+pnpm update-elo
+```
+
+K-factors: 60 for WC, 50 for major continental tournaments, 40 for qualifiers, 30 for friendlies. Home advantage = 100 Elo. Goal-difference multiplier matches eloratings.net.
+
+## Validating the model
+
+```bash
+pnpm backtest
+```
+
+Re-runs the Elo evolution, then for every WC match in 2010 / 2014 / 2018 / 2022 predicts using the Elos *just before* that match and scores against the actual outcome. Reports log-loss, Brier, modal accuracy, calibration bins, and expected vs. actual goals. Last run on 256 matches:
+
+| Metric | Model | Base-rate baseline |
+| --- | --- | --- |
+| Log-loss | **0.977** | 1.067 |
+| Brier | **0.573** | 0.647 |
+| Modal accuracy | **56.6%** | 41.4% |
+
+## Deploy
+
+```bash
+vercel
+```
+
+Set `FOOTBALL_DATA_API_KEY` in the Vercel project (AI Gateway key is auto-provisioned).

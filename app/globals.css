@@ -1,26 +1,71 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-canvas: oklch(0.985 0.004 75);
+  --color-shelf: oklch(0.965 0.005 75);
+  --color-surface: oklch(1 0 0);
+  --color-surface-raised: oklch(0.975 0.004 75);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-border-quiet: oklch(0.91 0.005 75);
+  --color-border-loud: oklch(0.82 0.006 75);
+
+  --color-text-primary: oklch(0.20 0.014 275);
+  --color-text-secondary: oklch(0.42 0.010 275);
+  --color-text-tertiary: oklch(0.58 0.009 275);
+  --color-text-quiet: oklch(0.72 0.008 275);
+
+  --color-accent: oklch(0.54 0.22 275);
+  --color-accent-deep: oklch(0.42 0.20 275);
+  --color-accent-soft: oklch(0.74 0.13 275);
+  --color-accent-wash: oklch(0.96 0.04 275);
+  --color-accent-line: oklch(0.88 0.08 275);
+
+  --color-draw: oklch(0.72 0.165 75);
+  --color-draw-wash: oklch(0.97 0.04 75);
+
+  --color-away: oklch(0.66 0.21 30);
+  --color-away-wash: oklch(0.96 0.04 30);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  background: var(--color-canvas);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+
+::selection {
+  background: var(--color-accent-wash);
+  color: var(--color-text-primary);
+}
+
+.shelf-divider {
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-border-quiet) 30%,
+    var(--color-border-quiet) 70%,
+    transparent
+  );
+  height: 1px;
+}
+
+/* Subtle pattern of dots for the cream hero — adds personality without
+   the gradient/grid-noise SaaS cliché. Used on a single decorative band. */
+.dot-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--color-border-loud) 1px,
+    transparent 0
+  );
+  background-size: 16px 16px;
 }
